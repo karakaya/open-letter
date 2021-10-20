@@ -7,3 +7,4 @@
 - [ ] Show 24h letters
 - [ ] Add 24h expiration to redis cache
 - [ ] Add view indicator
+- [ ] Fix docker-compose
