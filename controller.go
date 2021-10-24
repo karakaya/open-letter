@@ -1,11 +1,13 @@
 package main
 
 import (
+	"database/sql"
 	"encoding/json"
+	"log"
 	"net/http"
-	"time"
 
 	"github.com/gomodule/redigo/redis"
+	"github.com/gorilla/mux"
 )
 
 func index(w http.ResponseWriter, r *http.Request) {
@@ -33,6 +35,66 @@ func index(w http.ResponseWriter, r *http.Request) {
 func writeLetterView(w http.ResponseWriter, r *http.Request) {
 
 }
+
+func viewLetter(w http.ResponseWriter, r *http.Request) {
+	title := mux.Vars(r)["title"]
+	conn := pool.Get()
+
+	defer conn.Close()
+	var theLetter Letter
+	letter, err := redis.StringMap(conn.Do("HGETALL", "letter:"+title))
+	if len(letter) > 0 {
+		w.WriteHeader(http.StatusFound)
+		response, err := json.Marshal(letter)
+		if err != nil {
+			log.Println(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		w.Write(response)
+		return
+	}
+	if err != nil {
+		log.Println(err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	} else if len(letter) == 0 {
+		log.Printf("the letter (%s) not found in cache, looking from the database", title)
+
+		// stmt, err := db.Prepare("SELECT title,body FROM letters where title = $1")
+		// if err != nil {
+		// 	log.Println(err)
+		// 	w.WriteHeader(http.StatusNotFound)
+		// 	return
+		// }
+		// fmt.Println(letter)
+		// err = stmt.QueryRow(title).Scan(&theLetter.Title, &theLetter.Body)
+
+		stmt, err := db.Prepare("select * from letters where title = $1")
+		if err != nil {
+			if err == sql.ErrNoRows {
+				w.WriteHeader(http.StatusNotFound)
+				return
+			}
+			log.Println(err)
+			return
+		}
+		err = stmt.QueryRow(title).Scan(&theLetter.ID, &theLetter.Title, &theLetter.Body)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		response, err := json.Marshal(theLetter)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		w.WriteHeader(http.StatusFound)
+		w.Write(response)
+
+	}
+
+}
 func saveLetter(w http.ResponseWriter, r *http.Request) {
 
 	var letter Letter
@@ -40,7 +102,6 @@ func saveLetter(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		panic(err)
 	}
-	letter.Time = time.Now()
 
 	go func() {
 		stmt, err := db.Prepare("INSERT INTO letters(title,body) values($1,$2)")
@@ -58,7 +119,7 @@ func saveLetter(w http.ResponseWriter, r *http.Request) {
 	conn := pool.Get()
 	defer conn.Close()
 
-	_, err = conn.Do("HSET", "letter:"+letter.Title, "title", "redis-title", "body", "redis-body")
+	_, err = conn.Do("HSET", "letter:"+letter.Title, "title", letter.Title, "body", letter.Body)
 	if err != nil {
 		panic(err)
 	}

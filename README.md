@@ -4,7 +4,8 @@
 
 ### ToDo List
 
-- [ ] Show 24h letters
+- [ ] Show 24h letters - Add Time
+- [ ] Add SEF to letter title (change white spaces by "-" etc)
 - [ ] Add 24h expiration to redis cache
 - [ ] Add view indicator
 - [ ] Fix docker-compose
