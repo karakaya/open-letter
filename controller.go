@@ -32,10 +32,6 @@ func index(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func writeLetterView(w http.ResponseWriter, r *http.Request) {
-
-}
-
 func viewLetter(w http.ResponseWriter, r *http.Request) {
 	title := mux.Vars(r)["title"]
 	conn := pool.Get()
@@ -60,16 +56,6 @@ func viewLetter(w http.ResponseWriter, r *http.Request) {
 		return
 	} else if len(letter) == 0 {
 		log.Printf("the letter (%s) not found in cache, looking from the database", title)
-
-		// stmt, err := db.Prepare("SELECT title,body FROM letters where title = $1")
-		// if err != nil {
-		// 	log.Println(err)
-		// 	w.WriteHeader(http.StatusNotFound)
-		// 	return
-		// }
-		// fmt.Println(letter)
-		// err = stmt.QueryRow(title).Scan(&theLetter.Title, &theLetter.Body)
-
 		stmt, err := db.Prepare("select * from letters where title = $1")
 		if err != nil {
 			if err == sql.ErrNoRows {
